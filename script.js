@@ -1020,11 +1020,26 @@ function blobToDataURL(blob) {
 }
 
 // ── ACTIONS ──
-function downloadSticker() {
+async function downloadSticker() {
+  const blob = await new Promise(res => outCanvas.toBlob(res, 'image/png'));
+  const file = new File([blob], 'pukku-sticker.png', { type: 'image/png' });
+
+  // iOS / Android: シェアシート経由で写真フォルダに保存できる
+  if (navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: 'ぷっくりシール' });
+      return;
+    } catch (e) {
+      if (e.name === 'AbortError') return; // キャンセル
+    }
+  }
+
+  // デスクトップ: 通常ダウンロード
   const a = document.createElement('a');
   a.download = 'pukku-sticker.png';
-  a.href = outCanvas.toDataURL('image/png');
+  a.href = URL.createObjectURL(blob);
   a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
 }
 function resetImage() {
   state.cutoutImg = null;
