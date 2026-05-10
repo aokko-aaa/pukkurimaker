@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ぷっくりメーカー</title>
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "onnxruntime-web": "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.21.0/dist/ort.mjs"
+    }
+  }
+  </script>
+</head>
+<body>
+
+<header>
+  <h1>ぷっくりメーカー</h1>
+  <p>画像をジェルシールに加工する</p>
+</header>
+
+<main>
+
+  <!-- ── アップロードセクション ── -->
+  <section id="upload-section">
+    <div id="drop-zone" onclick="document.getElementById('fileInput').click()">
+      <p class="drop-main">画像をドラッグ＆ドロップ<br><span>またはクリックして選択</span></p>
+      <p class="drop-note">JPG・PNG対応 / 透明PNG（切り抜き済み）もOK</p>
+    </div>
+    <input type="file" id="fileInput" accept="image/*" hidden>
+
+    <div id="mode-select">
+      <div class="mode-label">背景除去</div>
+      <div class="mode-btns">
+        <button class="mode-btn active" onclick="setMode('auto',this)">自動AI（背景あり）</button>
+        <button class="mode-btn"        onclick="setMode('manual',this)">透明PNGをそのまま使う</button>
+      </div>
+      <p id="mode-desc">画像をアップロードするとAIが自動で背景を除去します。初回のみモデルのダウンロードで少し時間がかかります。</p>
+    </div>
+  </section>
+
+  <!-- ── 処理中表示 ── -->
+  <div id="status">
+    <div class="spinner"></div>
+    <span id="status-text">処理中...</span>
+  </div>
+
+  <!-- ── 編集セクション ── -->
+  <section id="edit-section" hidden>
+    <div id="preview-area">
+      <div class="pbox">
+        <div class="plabel">元画像</div>
+        <div class="pframe checker">
+          <img id="before-img" alt="元画像">
+        </div>
+      </div>
+      <div class="pbox">
+        <div class="plabel">シール加工後</div>
+        <div class="pframe checker">
+          <canvas id="out-canvas"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div id="controls">
+      <div class="ctrl-grid">
+        <div class="ctrl-item">
+          <label>ぷっくり感 <span class="val" id="v-pukku">70</span></label>
+          <input type="range" id="s-pukku"  min="0" max="100" value="70" oninput="onSlider('pukku',this)">
+        </div>
+        <div class="ctrl-item">
+          <label>光沢の強さ <span class="val" id="v-gloss">80</span></label>
+          <input type="range" id="s-gloss"  min="0"  max="100" value="80" oninput="onSlider('gloss',this)">
+        </div>
+        <div class="ctrl-item">
+          <label>影の強さ <span class="val" id="v-shadow">50</span></label>
+          <input type="range" id="s-shadow" min="0" max="100" value="50" oninput="onSlider('shadow',this)">
+        </div>
+        <div class="ctrl-item">
+          <label>ラメ / グリッター <span class="val" id="v-glitter">0</span></label>
+          <input type="range" id="s-glitter" min="0" max="100" value="0" oninput="onSlider('glitter',this)">
+        </div>
+      </div>
+
+      <div class="glitter-section">
+        <div class="mode-label">表面の質感</div>
+        <div class="glitter-btns">
+          <button class="tex-btn active" onclick="setTexType('mizu',this)">水</button>
+          <button class="tex-btn" onclick="setTexType('churutto',this)">ゼリー</button>
+          <button class="tex-btn" onclick="setTexType('matte',this)">樹脂（つや消し）</button>
+        </div>
+      </div>
+
+      <div class="glitter-section">
+        <div class="mode-label">中身の質感</div>
+        <div class="glitter-btns">
+          <button class="fill-btn active" onclick="setFillType('none',this)">なし</button>
+          <button class="fill-btn" onclick="setFillType('water',this)">水</button>
+          <button class="fill-btn" onclick="setFillType('jelly',this)">ゼリー</button>
+          <button class="fill-btn" onclick="setFillType('soda',this)">ソーダ</button>
+          <button class="fill-btn" onclick="setFillType('resin',this)">樹脂</button>
+          <button class="fill-btn" onclick="setFillType('metallic',this)">メタリック</button>
+        </div>
+      </div>
+
+      <div class="glitter-section">
+        <div class="mode-label">光源の位置</div>
+        <div class="glitter-btns">
+          <button class="light-btn" onclick="setLightPreset(-0.80,-0.55,this)">左上</button>
+          <button class="light-btn active" onclick="setLightPreset(-0.62,-0.72,this)">左斜め上</button>
+          <button class="light-btn" onclick="setLightPreset(0,-0.90,this)">真上</button>
+          <button class="light-btn" onclick="setLightPreset(0.62,-0.72,this)">右斜め上</button>
+          <button class="light-btn" onclick="setLightPreset(0.80,-0.55,this)">右上</button>
+        </div>
+      </div>
+
+      <div class="glitter-section">
+        <div class="mode-label">光源の数</div>
+        <div class="glitter-btns">
+          <button class="lightcount-btn active" onclick="setLightCount(1,this)">1灯</button>
+          <button class="lightcount-btn" onclick="setLightCount(2,this)">2灯</button>
+          <button class="lightcount-btn" onclick="setLightCount(3,this)">3灯</button>
+        </div>
+      </div>
+
+      <div class="glitter-section">
+        <div class="mode-label">ラメの種類</div>
+        <div class="glitter-btns">
+          <button class="glitter-btn active" onclick="setGlitter('silver',this)">シルバー</button>
+          <button class="glitter-btn" onclick="setGlitter('gold',this)">ゴールド</button>
+          <button class="glitter-btn" onclick="setGlitter('rainbow',this)">レインボー</button>
+        </div>
+      </div>
+
+      <div class="action-btns">
+        <button id="reset-btn" onclick="resetImage()">別の画像を選ぶ</button>
+        <button id="dl-btn"    onclick="downloadSticker()">PNGダウンロード</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script src="script.js"></script>
+</body>
+</html>
