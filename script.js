@@ -85,6 +85,12 @@ dropZone.addEventListener('drop', e => {
 });
 fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
 
+// クリップボードから画像を貼り付け（Cmd+V / Ctrl+V）
+document.addEventListener('paste', e => {
+  const item = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith('image/'));
+  if (item) handleFile(item.getAsFile());
+});
+
 // ── MODE ──
 function setMode(mode, el) {
   state.mode = mode;
