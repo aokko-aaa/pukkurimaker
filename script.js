@@ -91,6 +91,22 @@ document.addEventListener('paste', e => {
   if (item) handleFile(item.getAsFile());
 });
 
+// ボタンからクリップボード貼り付け（スマホ対応）
+async function pasteFromClipboard(e) {
+  e.stopPropagation(); // drop-zone の onclick を止める
+  try {
+    const items = await navigator.clipboard.read();
+    const imageItem = items.find(item => item.types.some(t => t.startsWith('image/')));
+    if (!imageItem) { alert('クリップボードに画像がありません'); return; }
+    const type = imageItem.types.find(t => t.startsWith('image/'));
+    const blob = await imageItem.getType(type);
+    handleFile(blob);
+  } catch (err) {
+    // 権限拒否 or 非対応ブラウザ → paste イベント方式に案内
+    alert('貼り付けできませんでした。コピーした後に Cmd+V / Ctrl+V をお試しください。');
+  }
+}
+
 // ── MODE ──
 function setMode(mode, el) {
   state.mode = mode;

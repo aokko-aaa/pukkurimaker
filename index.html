@@ -27,7 +27,8 @@
   <section id="upload-section">
     <div id="drop-zone" onclick="document.getElementById('fileInput').click()">
       <p class="drop-main">画像をドラッグ＆ドロップ<br><span>またはクリックして選択</span></p>
-      <p class="drop-note">JPG・PNG対応 / 透明PNG（切り抜き済み）もOK / Cmd+V で貼り付け可</p>
+      <p class="drop-note">JPG・PNG対応 / 透明PNG（切り抜き済み）もOK</p>
+      <button id="paste-btn" onclick="pasteFromClipboard(event)">クリップボードから貼り付け</button>
     </div>
     <input type="file" id="fileInput" accept="image/*" hidden>
 
